@@ -16,6 +16,9 @@ All notable changes to experimental packages in this project will be documented 
 
 ### :rocket: (Enhancement)
 
+* feat(exporter-prometheus): add additional attributes option [#5317](https://github.com/open-telemetry/opentelemetry-js/pull/5317) @marius-a-mueller
+  * Add `withResourceConstantLabels` option to `ExporterConfig`. It can be used to define a regex pattern to choose which resource attributes will be used as static labels on the metrics. The default is to not set any static labels.
+
 ### :bug: (Bug Fix)
 
 * fix(exporter-metrics-otlp-http): browser OTLPMetricExporter was not passing config to OTLPMetricExporterBase super class [#5331](https://github.com/open-telemetry/opentelemetry-js/pull/5331) @trentm

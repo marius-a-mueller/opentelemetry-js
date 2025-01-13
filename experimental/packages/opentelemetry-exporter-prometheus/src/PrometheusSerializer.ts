@@ -174,16 +174,28 @@ const NO_REGISTERED_METRICS = '# no registered metrics';
 export class PrometheusSerializer {
   private _prefix: string | undefined;
   private _appendTimestamp: boolean;
+  private _additionalAttributes: Attributes | undefined;
+  private _withResourceConstantLabels: string | RegExp | undefined;
 
-  constructor(prefix?: string, appendTimestamp = false) {
+  constructor(
+    prefix?: string,
+    appendTimestamp = false,
+    withResourceConstantLabels?: string | RegExp
+  ) {
     if (prefix) {
       this._prefix = prefix + '_';
     }
     this._appendTimestamp = appendTimestamp;
+    this._withResourceConstantLabels = withResourceConstantLabels;
   }
 
   serialize(resourceMetrics: ResourceMetrics): string {
     let str = '';
+
+    this._additionalAttributes = this._filterResourceConstantLabels(
+      resourceMetrics.resource.attributes,
+      this._withResourceConstantLabels
+    );
 
     for (const scopeMetrics of resourceMetrics.scopeMetrics) {
       str += this._serializeScopeMetrics(scopeMetrics);
@@ -194,6 +206,23 @@ export class PrometheusSerializer {
     }
 
     return this._serializeResource(resourceMetrics.resource) + str;
+  }
+
+  private _filterResourceConstantLabels(
+    attributes: Attributes,
+    pattern: string | RegExp | undefined
+  ) {
+    if (pattern) {
+      const filteredAttributes: Attributes = {};
+      for (const [key, value] of Object.entries(attributes)) {
+        const sanitizedAttributeName = sanitizePrometheusMetricName(key);
+        if (sanitizedAttributeName.match(pattern)) {
+          filteredAttributes[sanitizedAttributeName] = value;
+        }
+      }
+      return filteredAttributes;
+    }
+    return;
   }
 
   private _serializeScopeMetrics(scopeMetrics: ScopeMetrics) {
@@ -263,7 +292,7 @@ export class PrometheusSerializer {
       attributes,
       value,
       this._appendTimestamp ? timestamp : undefined,
-      undefined
+      this._additionalAttributes
     );
     return results;
   }
@@ -288,7 +317,7 @@ export class PrometheusSerializer {
           attributes,
           value,
           this._appendTimestamp ? timestamp : undefined,
-          undefined
+          this._additionalAttributes
         );
     }
 
@@ -315,12 +344,12 @@ export class PrometheusSerializer {
         attributes,
         cumulativeSum,
         this._appendTimestamp ? timestamp : undefined,
-        {
+        Object.assign({}, this._additionalAttributes ?? {}, {
           le:
             upperBound === undefined || upperBound === Infinity
               ? '+Inf'
               : String(upperBound),
-        }
+        })
       );
     }
 
